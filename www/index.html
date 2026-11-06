@@ -1,0 +1,500 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cotizador de préstamo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Concepto: hoja de cálculo hecha bolsillo. Campos amarillos como en el Excel, resultado y mensaje de WhatsApp al lado (escritorio) o debajo (celular), con barra de envío fija abajo. */
+:root{
+  --bg:#F2F3F6; --surface:#FFFFFF; --ink:#1A2132; --muted:#5C6578; --line:#D8DCE5;
+  --accent:#22304D; --accent-ink:#FFFFFF;
+  --field:#FFF4C4; --field-line:#DFC65B;
+  --wa:#13804A; --wa-ink:#FFFFFF; --bubble:#DDF5D0; --bubble-ink:#14231A;
+  --ok:#13804A; --ok-soft:#DDF1E6; --warn:#855400; --warn-soft:#FBE9C0; --bad:#A3302F; --bad-soft:#F7DCDB; --info:#27508F; --info-soft:#DEE8F7;
+  --font-display:'Archivo','Segoe UI',system-ui,sans-serif;
+  --font-body:'Instrument Sans','Segoe UI',system-ui,sans-serif;
+  --font-data:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F131B; --surface:#171C27; --ink:#E7EAF2; --muted:#99A2B5; --line:#2A3245;
+    --accent:#A9BEF0; --accent-ink:#0E1424;
+    --field:#2E2A12; --field-line:#6E5F1F;
+    --wa:#35C37A; --wa-ink:#06190F; --bubble:#1E4A33; --bubble-ink:#E6F4EA;
+    --ok:#5FD39A; --ok-soft:#173A2A; --warn:#E6B65A; --warn-soft:#3A2D12; --bad:#F29A98; --bad-soft:#3F1D1D; --info:#9DB8EE; --info-soft:#1B2A44;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F131B; --surface:#171C27; --ink:#E7EAF2; --muted:#99A2B5; --line:#2A3245;
+  --accent:#A9BEF0; --accent-ink:#0E1424;
+  --field:#2E2A12; --field-line:#6E5F1F;
+  --wa:#35C37A; --wa-ink:#06190F; --bubble:#1E4A33; --bubble-ink:#E6F4EA;
+  --ok:#5FD39A; --ok-soft:#173A2A; --warn:#E6B65A; --warn-soft:#3A2D12; --bad:#F29A98; --bad-soft:#3F1D1D; --info:#9DB8EE; --info-soft:#1B2A44;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;
+  padding-block:16px 132px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.kicker{font:500 12px var(--font-data);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(26px,7vw,36px)/1.05 var(--font-display);margin:4px 0 0;letter-spacing:-.01em;text-wrap:balance}
+h2{font:700 12px var(--font-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:10px 16px;font:600 16px var(--font-body);color:var(--muted);cursor:pointer;min-height:44px}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.cols{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.inp{width:100%;background:var(--field);color:var(--ink);border:1px solid var(--field-line);border-radius:8px;padding:10px 12px;min-height:48px;font:500 17px var(--font-data)}
+.inp.txt{font-family:var(--font-body);font-weight:500}
+.unit{position:relative;display:block}
+.unit .inp{padding-right:34px}
+.unit i{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--muted);font:500 14px var(--font-data)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;min-height:44px;padding:8px 12px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:600 15px var(--font-body);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg.modes button{flex:1 1 30%}
+.seg.cats button{flex:1 1 0;min-width:44px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:600 16px var(--font-body);cursor:pointer;text-decoration:none}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.45;pointer-events:none}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:var(--wa-ink);flex:1}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{min-height:40px;padding:6px 12px;font-size:14px}
+.notice{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;background:var(--info-soft);color:var(--info);border-radius:10px;padding:12px 14px;font-size:14px}
+.banner{border-radius:10px;padding:12px 14px;font-weight:600;font-size:15px}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.info{background:var(--info-soft);color:var(--info)}
+.big{font:600 clamp(26px,8vw,34px)/1.1 var(--font-data);letter-spacing:-.02em}
+.kv{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.kv .k{color:var(--muted);font-size:14px}
+.kv .v{font:500 16px var(--font-data);text-align:right;white-space:nowrap}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.sum .full{grid-column:1/-1}
+.sum small{display:block;color:var(--muted);font-size:13px}
+.sum b{font:600 19px var(--font-data)}
+.scroll{overflow-x:auto}
+table.cu{width:100%;border-collapse:collapse;font-size:15px}
+.cu th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--line);letter-spacing:.04em}
+.cu td{padding:9px 6px;border-bottom:1px solid var(--line)}
+.cu th:not(:first-child),.cu td:not(:first-child){text-align:right}
+.cu .n{font-family:var(--font-data);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cu .t{font-weight:600}
+details summary{cursor:pointer;color:var(--muted);font-size:14px}
+.bubble{background:var(--bubble);color:var(--bubble-ink);border-radius:12px 12px 12px 2px;padding:12px 14px;font:15px/1.4 var(--font-body);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:8px;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.bar .btn:first-child{flex:0 0 auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;max-width:90vw;text-align:center}
+.toast:empty{display:none}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.prow{display:grid;grid-template-columns:44px 1fr 1fr 1fr;gap:8px;align-items:end}
+.prow.two{grid-template-columns:1fr 1fr}
+.prow.plazo{grid-template-columns:1fr 1fr}
+.prow .tag{font:700 18px var(--font-display);padding-bottom:12px}
+.pbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+@media (min-width:900px){
+  body{padding-block:32px 48px}
+  .cols{grid-template-columns:minmax(0,1fr) minmax(0,440px);align-items:start}
+  #result{position:sticky;top:16px}
+  .bar{position:static;border:0;background:none;padding:0}
+  .toast{bottom:24px}
+}
+</style>
+
+<div class="app">
+  <header>
+    <div class="kicker">Financiamiento de vehículos</div>
+    <h1>Cotizador de préstamo</h1>
+  </header>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab" role="tab" data-tab="cotizar" aria-selected="true">Cotizar</button>
+    <button class="tab" role="tab" data-tab="params" aria-selected="false">Parámetros</button>
+  </nav>
+  <div id="pane-cot" class="cols">
+    <div id="form" class="stack"></div>
+    <aside id="result" class="stack" aria-live="polite"></aside>
+  </div>
+  <div id="pane-par" class="stack" hidden></div>
+  <div id="toast" class="toast" role="status"></div>
+</div>
+
+<script>
+var Cot = (function () {
+"use strict";
+var DEF = {
+  gastos: { avalExt: 1125, avalInt: 0, buro: 150, ccit: 230 },
+  cargoFijo: 663,
+  descNoReciente: 0.08,
+  descAntiguo: 0.05,
+  bandas: [{ lim: 171000, desc: 0 }, { lim: 187000, desc: 0.1 }, { lim: 218000, desc: 0.2 }],
+  cats: {
+    A: { tasa: 0.03, pct: 0.7, techo: 400000 }, B: { tasa: 0.035, pct: 0.65, techo: 350000 },
+    C: { tasa: 0.035, pct: 0.6, techo: 300000 }, D: { tasa: 0.035, pct: 0.55, techo: 200000 }, E: { tasa: 0.035, pct: 0.5, techo: 200000 }
+  },
+  comision: [{ desde: 0, pct: 0.04 }, { desde: 50000, pct: 0.035 }, { desde: 75000, pct: 0.035 }, { desde: 100000, pct: 0.03 },
+    { desde: 150000, pct: 0.028 }, { desde: 200000, pct: 0.025 }, { desde: 300000, pct: 0.025 }],
+  plazos: [{ n: "5 años", m: 60 }, { n: "4 años", m: 48 }, { n: "3 años", m: 36 }, { n: "2 años", m: 24 }, { n: "1 año", m: 12 }],
+  tasas: [0.03, 0.035],
+  textoFinal: ""
+};
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function mergeDeep(base, over) {
+  if (Array.isArray(base) || typeof base !== "object" || base === null) return over === undefined ? clone(base) : over;
+  var out = {};
+  Object.keys(base).forEach(function (k) { out[k] = mergeDeep(base[k], over ? over[k] : undefined); });
+  return out;
+}
+function merge(d) { return mergeDeep(DEF, d || {}); }
+function parseNum(v) {
+  if (typeof v === "number") return v;
+  var t = String(v == null ? "" : v).replace(/[^0-9.\-]/g, "");
+  if (t === "" || t === "-" || t === ".") return NaN;
+  return parseFloat(t);
+}
+function fmt(x, d) { return Number(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function money(x) { return "L. " + fmt(x, 2); }
+function r2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
+function pmt(rate, n, pv) { return rate ? pv * rate / (1 - Math.pow(1 + rate, -n)) : pv / n; }
+function tier(P, amount) {
+  var pct = P.comision[0].pct;
+  P.comision.forEach(function (t) { if (amount >= t.desde) pct = t.pct; });
+  return pct;
+}
+function band(P, miles) {
+  if (!isFinite(miles)) return 0;
+  if (miles < P.bandas[0].lim) return 1;
+  if (miles < P.bandas[1].lim) return 2;
+  if (miles < P.bandas[2].lim) return 3;
+  return 0;
+}
+function blank() {
+  return { mode: 3, cliente: "", valor: "", recien: "SI", millas: "", descSobre: "PRECIO", cat: "A", monto: "", primaBy: "MONTO", primaPct: "", primaMonto: "",
+    antiguo: "NO", tasa: "cat", tasaOtra: "", plazo: "TODOS", aval: "EXTERNO", buro: true, ccit: true, comision: true, phone: "", example: false };
+}
+function example() { var s = blank(); s.valor = "250000"; s.primaMonto = "80000"; s.example = true; return s; }
+
+function calc(S, P) {
+  var mode = Number(S.mode) || 3, cat = P.cats[S.cat] || P.cats.A;
+  var n = function (v) { var x = parseNum(v); return isFinite(x) ? x : 0; };
+  var valor = n(S.valor), millas = parseNum(S.millas), b = band(P, millas), prima = 0;
+  if (mode === 3) prima = S.primaBy === "PORCENTAJE" ? r2(valor * n(S.primaPct) / 100) : r2(n(S.primaMonto));
+  var valid = 0;
+  if (mode === 1) valid = (valor > 0 && isFinite(millas) && S.recien && b > 0 && S.descSobre) ? 1 : 0;
+  else if (mode === 2) valid = n(S.monto) > 0 ? 1 : 0;
+  else valid = (valor > 0 && S.primaBy && prima >= 0 && prima < valor) ? 1 : 0;
+  var base = 0, descNR = 0, pctApl = cat.pct, prestAntes = 0, descPct = 0, descMill = 0, loan = 0;
+  if (valid) {
+    if (mode === 1) {
+      descNR = S.recien === "NO" ? r2(valor * P.descNoReciente) : 0;
+      base = valor - descNR;
+      pctApl = Math.max(0, cat.pct - (S.antiguo === "SI" ? P.descAntiguo : 0));
+      prestAntes = r2(base * pctApl);
+      descPct = P.bandas[b - 1].desc;
+      descMill = S.descSobre === "PRECIO" ? r2(base * descPct) : r2(prestAntes * descPct);
+      loan = r2(prestAntes - descMill);
+    } else if (mode === 2) loan = r2(n(S.monto));
+    else loan = r2(valor - prima);
+  }
+  var tasa = cat.tasa;
+  if (S.tasa === "otra") { var o = parseNum(S.tasaOtra); if (isFinite(o) && o > 0) tasa = o / 100; }
+  else if (S.tasa && S.tasa !== "cat") { var t = parseFloat(S.tasa); if (isFinite(t) && t > 0) tasa = t; }
+  var aval = S.aval === "EXTERNO" ? P.gastos.avalExt : S.aval === "INTERNO" ? P.gastos.avalInt : 0;
+  var buro = S.buro ? P.gastos.buro : 0, ccit = S.ccit ? P.gastos.ccit : 0;
+  var comPct = tier(P, Math.max(loan, 0)), comision = S.comision ? r2(loan * comPct) : 0;
+  var gastos = aval + buro + ccit + comision;
+  var salida = !valid ? 0 : (mode === 3 ? prima + gastos : loan - gastos);
+  var cuotas = P.plazos.map(function (p) {
+    var c = loan > 0 ? r2(pmt(tasa, p.m, loan)) : 0;
+    return { n: p.n, m: p.m, cuota: c, total: loan > 0 ? r2(c + P.cargoFijo) : 0 };
+  });
+  var st;
+  if (valid) {
+    if (loan > cat.techo) st = "ATENCIÓN: el préstamo pasa el techo de la categoría (L. " + fmt(cat.techo, 0) + ")";
+    else if (salida < 0) st = "ATENCIÓN: los gastos son mayores que el préstamo";
+    else st = "OK";
+  } else if (mode === 1) {
+    if (valor <= 0) st = "FALTA: valor de venta del vehículo";
+    else if (!S.recien) st = "FALTA: indique si es recién ingreso";
+    else if (!isFinite(millas)) st = "FALTA: millas del vehículo";
+    else if (b === 0) st = "NO CALIFICA: millas igual o mayor a " + fmt(P.bandas[2].lim, 0);
+    else st = "FALTA: elija sobre qué se aplica el descuento de millaje";
+  } else if (mode === 2) st = "FALTA: monto del préstamo";
+  else if (valor <= 0) st = "FALTA: valor de venta del vehículo";
+  else if (!S.primaBy) st = "FALTA: elija cómo calcular la prima";
+  else st = "PRIMA NO VÁLIDA: debe ser 0 o más y menor que el valor del vehículo";
+  return { mode: mode, valid: valid, valor: valor, millas: millas, band: b, cat: cat, pctApl: pctApl, prima: prima, base: base, descNR: descNR, prestAntes: prestAntes,
+    descPct: descPct, descMill: descMill, loan: loan, tasa: tasa, aval: aval, buro: buro, ccit: ccit, comPct: comPct, comision: comision,
+    gastos: gastos, salida: salida, cuotas: cuotas, status: st };
+}
+
+function message(S, P, R) {
+  if (!R.valid) return null;
+  var L = [], m = R.mode;
+  L.push(m === 3 ? "*COTIZACIÓN - VENTA FINANCIADA*" : "*COTIZACIÓN DE PRÉSTAMO*");
+  var cl = String(S.cliente || "").trim();
+  if (cl) L.push("Cliente / Vehículo: " + cl);
+  L.push("");
+  if (m !== 2) L.push("Valor del vehículo: " + money(R.valor));
+  if (m === 3) L.push("Prima: " + money(R.prima) + " (" + fmt(R.prima / R.valor * 100, 1) + "% del valor)");
+  L.push((m === 3 ? "*Monto a financiar: " : "*Monto del préstamo: ") + money(R.loan) + "*");
+  if (R.gastos > 0) {
+    L.push(""); L.push("Gastos de cierre:");
+    if (R.aval > 0) L.push("  - Avalúo: " + money(R.aval));
+    if (R.buro > 0) L.push("  - Consulta de Buró: " + money(R.buro));
+    if (R.ccit > 0) L.push("  - Inscripción CCIT: " + money(R.ccit));
+    if (R.comision > 0) L.push("  - Comisión por desembolso (" + fmt(R.comPct * 100, 1) + "%): " + money(R.comision));
+    L.push("Total gastos de cierre: " + money(R.gastos));
+  }
+  if (m === 3) { if (R.gastos > 0) L.push("*PAGO INICIAL (prima + gastos): " + money(R.salida) + "*"); }
+  else { L.push(""); L.push("*VALOR A DESEMBOLSAR: " + money(R.salida) + "*"); }
+  L.push(""); L.push("Tasa de interés mensual: " + fmt(R.tasa * 100, 2) + "%");
+  L.push(""); L.push("*Cuota mensual:*");
+  var found = P.plazos.some(function (p) { return p.n === S.plazo; });
+  R.cuotas.forEach(function (c) {
+    if (S.plazo === "TODOS" || !found || S.plazo === c.n) L.push(c.n + " (" + c.m + " meses): " + money(c.total));
+  });
+  if (String(P.textoFinal || "").trim()) { L.push(""); L.push(String(P.textoFinal).trim()); }
+  return L;
+}
+return { DEF: DEF, clone: clone, merge: merge, parseNum: parseNum, fmt: fmt, money: money, calc: calc, message: message, blank: blank, example: example };
+})();
+</script>
+
+<script>
+(function () {
+"use strict";
+var C = window.Cot;
+var KEY = "cotizador-prestamo-v1";
+var P = C.clone(C.DEF), Pd = C.clone(C.DEF);
+var S = null;
+try { var raw = localStorage.getItem(KEY); if (raw) S = Object.assign(C.blank(), JSON.parse(raw)); } catch (e) { S = null; }
+if (!S) S = C.example();
+var tab = "cotizar", db = null, RO = false, pDirty = false, pMsg = "", resetAsk = false, toastT = null, saveT = null;
+
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function pct(x) { return C.fmt(x * 100, 2) + "%"; }
+function persist() { clearTimeout(saveT); saveT = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300); }
+function toast(t) { var el = $("#toast"); el.textContent = t; clearTimeout(toastT); toastT = setTimeout(function () { el.textContent = ""; }, 2600); }
+function focusInForm() { var a = document.activeElement; return !!(a && a !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && $("#pane-cot").contains(a)); }
+
+function seg(key, opts, cur, cls) {
+  return '<div class="seg ' + (cls || "") + '" role="group">' + opts.map(function (o) {
+    return '<button type="button" data-set="' + key + '" data-v="' + esc(o[0]) + '" aria-pressed="' + (String(cur) === String(o[0]) ? "true" : "false") + '">' + esc(o[1]) + "</button>";
+  }).join("") + "</div>";
+}
+function numIn(key, label, ph, unit) {
+  return '<label class="field"><span class="lbl">' + label + '</span><span class="unit"><input class="inp" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-in="' + key + '" data-fmt="' + (unit ? "" : "int") + '" value="' + esc(S[key]) + '" placeholder="' + ph + '">' + (unit ? "<i>" + unit + "</i>" : "") + "</span></label>";
+}
+function grp(label, inner) { return '<div class="field"><span class="lbl">' + label + "</span>" + inner + "</div>"; }
+
+function formHtml() {
+  var cat = P.cats[S.cat] || P.cats.A, m = Number(S.mode);
+  var h = "";
+  if (S.example) h += '<div class="notice"><span>Estos son valores de ejemplo.</span><button class="btn small" data-act="reset">Empezar en blanco</button></div>';
+  h += '<section class="panel"><h2>Cómo calcular</h2>' + seg("mode", [[3, "Venta financiada"], [1, "Por valor del vehículo"], [2, "Por monto del préstamo"]], m, "modes") + "</section>";
+  h += '<section class="panel"><h2>Datos</h2>';
+  h += '<label class="field"><span class="lbl">Cliente / vehículo (opcional)</span><input class="inp txt" type="text" autocomplete="off" data-in="cliente" value="' + esc(S.cliente) + '" placeholder="Ej. Juan Pérez, Toyota Corolla 2018"></label>';
+  if (m !== 2) h += numIn("valor", "Valor de venta del vehículo (L.)", "250,000");
+  if (m === 1) {
+    h += grp("¿Recién ingreso al país?", seg("recien", [["SI", "Sí"], ["NO", "No"]], S.recien));
+    h += grp("¿Vehículo antiguo o de agencia? (resta " + C.fmt(P.descAntiguo * 100, 0) + "% al préstamo)", seg("antiguo", [["SI", "Sí"], ["NO", "No"]], S.antiguo));
+    h += numIn("millas", "Millas del vehículo", "90,000");
+    h += grp("El descuento de millaje se aplica sobre", seg("descSobre", [["PRECIO", "Precio del vehículo"], ["PRESTAMO", "Monto del préstamo"]], S.descSobre));
+  }
+  if (m === 2) h += numIn("monto", "Monto del préstamo (L.)", "170,000");
+  if (m === 3) {
+    h += grp("Prima: calcular por", seg("primaBy", [["MONTO", "Monto"], ["PORCENTAJE", "Porcentaje"]], S.primaBy));
+    h += S.primaBy === "PORCENTAJE" ? numIn("primaPct", "Prima (% del valor)", "25", "%") : numIn("primaMonto", "Prima (L.)", "80,000");
+  }
+  h += grp("Categoría", seg("cat", Object.keys(P.cats).map(function (k) { return [k, k]; }), S.cat, "cats") +
+    '<p class="hint">Tasa ' + pct(cat.tasa) + (m === 1 ? " · Préstamo " + (S.antiguo === "SI" ? C.fmt(Math.max(0, cat.pct - P.descAntiguo) * 100, 0) + "% del valor (" + C.fmt(cat.pct * 100, 0) + "% menos " + C.fmt(P.descAntiguo * 100, 0) + "%)" : C.fmt(cat.pct * 100, 0) + "% del valor") : "") + " · Techo L. " + C.fmt(cat.techo, 0) + "</p>");
+  var tasaOpts = [["cat", "Según categoría"]].concat(P.tasas.map(function (t) { return [String(t), pct(t)]; })).concat([["otra", "Otra"]]);
+  var tasaCur = S.tasa;
+  h += grp("Tasa mensual", seg("tasa", tasaOpts, tasaCur === "cat" || tasaCur === "otra" ? tasaCur : String(parseFloat(tasaCur))));
+  if (S.tasa === "otra") h += numIn("tasaOtra", "Tasa mensual (%)", "3.25", "%");
+  h += grp("Plazo a mostrar al cliente", seg("plazo", [["TODOS", "Todos"]].concat(P.plazos.map(function (p) { return [p.n, p.n]; })), S.plazo));
+  h += "</section>";
+  h += '<section class="panel"><h2>Gastos de cierre</h2>';
+  h += grp("Avalúo (L. " + C.fmt(P.gastos.avalExt, 0) + " externo · L. " + C.fmt(P.gastos.avalInt, 0) + " interno)", seg("aval", [["EXTERNO", "Externo"], ["INTERNO", "Interno"], ["NO", "No"]], S.aval));
+  h += grp("Consulta de Buró (L. " + C.fmt(P.gastos.buro, 0) + ")", seg("buro", [["1", "Sí"], ["0", "No"]], S.buro ? "1" : "0"));
+  h += grp("Inscripción CCIT (L. " + C.fmt(P.gastos.ccit, 0) + ")", seg("ccit", [["1", "Sí"], ["0", "No"]], S.ccit ? "1" : "0"));
+  h += grp("Comisión por desembolso (según el monto)", seg("comision", [["1", "Sí"], ["0", "No"]], S.comision ? "1" : "0"));
+  h += "</section>";
+  h += '<section class="panel"><h2>Enviar a (opcional)</h2><label class="field"><span class="lbl">WhatsApp del cliente</span><input class="inp" type="tel" inputmode="tel" autocomplete="off" data-in="phone" value="' + esc(S.phone) + '" placeholder="9999-9999"><span class="hint">Con 8 dígitos se agrega el +504. Vacío: eliges el contacto en WhatsApp.</span></label>';
+  h += '<div><button class="btn small" data-act="reset">Nueva cotización</button></div></section>';
+  return h;
+}
+
+function waHref(text) {
+  var d = String(S.phone || "").replace(/\D/g, "");
+  if (d.length === 8) d = "504" + d;
+  return (d.length >= 8 ? "https://wa.me/" + d : "https://wa.me/") + "?text=" + encodeURIComponent(text);
+}
+function bubbleHtml(lines) { return esc(lines.join("\n")).replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>"); }
+
+function resultHtml() {
+  var R = C.calc(S, P), lines = C.message(S, P, R), h = "";
+  var st = R.status, cls = st === "OK" ? "ok" : st.indexOf("ATENCIÓN") === 0 ? "warn" : st.indexOf("FALTA") === 0 ? "info" : "bad";
+  h += '<div class="banner ' + cls + '">' + (st === "OK" ? "Listo para enviar" : esc(st)) + "</div>";
+  if (R.valid) {
+    var m = R.mode;
+    h += '<section class="panel"><div class="sum"><div class="full"><small>' + (m === 3 ? "Monto a financiar" : "Monto del préstamo") + '</small><span class="big">' + C.money(R.loan) + "</span></div>" +
+      "<div><small>" + (m === 3 ? "Pago inicial (prima + gastos)" : "Valor a desembolsar") + "</small><b>" + C.money(R.salida) + "</b></div>" +
+      "<div><small>Tasa mensual</small><b>" + C.fmt(R.tasa * 100, 2) + "%</b></div></div>";
+    h += '<div class="scroll"><table class="cu"><thead><tr><th>Plazo</th><th>Cuota préstamo</th><th>Cuota total</th></tr></thead><tbody>';
+    var found = P.plazos.some(function (p) { return p.n === S.plazo; });
+    R.cuotas.forEach(function (c) {
+      if (S.plazo === "TODOS" || !found || S.plazo === c.n) h += "<tr><td>" + esc(c.n) + ' <span class="hint">(' + c.m + ')</span></td><td class="n">' + C.fmt(c.cuota, 2) + '</td><td class="n t">' + C.fmt(c.total, 2) + "</td></tr>";
+    });
+    h += '</tbody></table></div><p class="hint">La cuota total incluye el cargo fijo mensual de ' + C.money(P.cargoFijo) + ".</p>";
+    h += "<details><summary>Detalle del cálculo</summary><div class=\"stack\" style=\"gap:6px;margin-top:10px\">";
+    var kv = function (k, v) { return '<div class="kv"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>"; };
+    if (m === 1) {
+      h += kv("Valor de venta", C.money(R.valor));
+      if (R.descNR > 0) h += kv("(-) Descuento por no recién ingreso", C.money(R.descNR));
+      h += kv("Valor base", C.money(R.base)) + kv("Banda de millas", R.band === 1 ? "Menos de " + C.fmt(P.bandas[0].lim, 0) : R.band === 2 ? C.fmt(P.bandas[0].lim, 0) + " a " + C.fmt(P.bandas[1].lim - 1, 0) : C.fmt(P.bandas[1].lim, 0) + " a " + C.fmt(P.bandas[2].lim - 1, 0));
+      h += kv("% de préstamo de la categoría", C.fmt(R.cat.pct * 100, 0) + "%");
+      if (S.antiguo === "SI") h += kv("(-) Antiguo o de agencia", C.fmt(P.descAntiguo * 100, 0) + "%") + kv("% de préstamo aplicado", C.fmt(R.pctApl * 100, 0) + "%");
+      h += kv("Préstamo antes del descuento", C.money(R.prestAntes)) + kv("(-) Descuento por millaje (" + C.fmt(R.descPct * 100, 0) + "%)", C.money(R.descMill));
+    } else if (m === 3) h += kv("Valor de venta", C.money(R.valor)) + kv("(-) Prima", C.money(R.prima));
+    h += kv("Monto del préstamo", C.money(R.loan));
+    if (R.gastos > 0) {
+      if (R.aval > 0) h += kv("Avalúo", C.money(R.aval));
+      if (R.buro > 0) h += kv("Consulta de Buró", C.money(R.buro));
+      if (R.ccit > 0) h += kv("Inscripción CCIT", C.money(R.ccit));
+      if (R.comision > 0) h += kv("Comisión (" + C.fmt(R.comPct * 100, 1) + "%)", C.money(R.comision));
+      h += kv("Total gastos de cierre", C.money(R.gastos));
+    }
+    h += "</div></details></section>";
+    h += '<section class="panel"><h2>Mensaje para WhatsApp</h2><div class="bubble" id="bubble">' + bubbleHtml(lines) + "</div></section>";
+  } else h += '<section class="panel"><p class="hint">Completa los datos amarillos para ver la cotización y el mensaje.</p></section>';
+  var ok = !!lines;
+  h += '<div class="bar"><button class="btn" data-act="copy"' + (ok ? "" : " disabled") + '>Copiar</button>' +
+    (ok ? '<a class="btn wa" href="' + esc(waHref(lines.join("\n"))) + '" target="_blank" rel="noopener">Enviar por WhatsApp</a>' : '<a class="btn wa" aria-disabled="true">Enviar por WhatsApp</a>') + "</div>";
+  return h;
+}
+
+function get(o, path) { return path.split(".").reduce(function (a, k) { return a == null ? a : a[k]; }, o); }
+function setp(o, path, v) { var p = path.split("."), last = p.pop(), t = p.reduce(function (a, k) { return a[k]; }, o); t[last] = v; }
+function pin(path, label, kind, unit) {
+  var v = get(Pd, path), show = kind === "pct" ? +(v * 100).toFixed(4) : v;
+  var txt = kind === "txt";
+  return '<label class="field"><span class="lbl">' + label + '</span><span class="unit"><input class="inp' + (txt ? " txt" : "") + '" type="text" ' + (txt ? "" : 'inputmode="decimal" ') + 'autocomplete="off" data-p="' + path + '" data-k="' + kind + '" value="' + esc(show) + '"' + (RO ? " disabled" : "") + ">" + (unit ? "<i>" + unit + "</i>" : "") + "</span></label>";
+}
+function paramsHtml() {
+  var h = '<section class="panel"><h2>Gastos fijos</h2><div class="grid3">' +
+    pin("gastos.avalExt", "Avalúo externo (L.)", "num") + pin("gastos.avalInt", "Avalúo interno (L.)", "num") + pin("gastos.buro", "Consulta de Buró (L.)", "num") + pin("gastos.ccit", "Inscripción CCIT (L.)", "num") +
+    pin("cargoFijo", "Cargo fijo mensual en la cuota (L.)", "num") + pin("descNoReciente", "Descuento al precio si NO es recién ingreso", "pct", "%") + pin("descAntiguo", "Resta al % de préstamo si es antiguo o de agencia", "pct", "%") + "</div></section>";
+  h += '<section class="panel"><h2>Millas y descuento por millaje</h2><p class="hint">Con millas iguales o mayores al límite de la banda 3 el vehículo no califica.</p>';
+  Pd.bandas.forEach(function (b, i) { h += '<div class="prow two">' + pin("bandas." + i + ".lim", "Banda " + (i + 1) + ": menos de (millas)", "num") + pin("bandas." + i + ".desc", "Descuento", "pct", "%") + "</div>"; });
+  h += "</section>";
+  h += '<section class="panel"><h2>Categorías</h2>';
+  Object.keys(Pd.cats).forEach(function (k) { h += '<div class="prow"><span class="tag">' + k + "</span>" + pin("cats." + k + ".tasa", "Tasa mensual", "pct", "%") + pin("cats." + k + ".pct", "% de préstamo", "pct", "%") + pin("cats." + k + ".techo", "Techo (L.)", "num") + "</div>"; });
+  h += "</section>";
+  h += '<section class="panel"><h2>Comisión por desembolso</h2><p class="hint">Según el monto del préstamo. Los montos deben ir de menor a mayor.</p>';
+  Pd.comision.forEach(function (t, i) { h += '<div class="prow two">' + pin("comision." + i + ".desde", "Desde (L.)", "num") + pin("comision." + i + ".pct", "Porcentaje", "pct", "%") + "</div>"; });
+  h += "</section>";
+  h += '<section class="panel"><h2>Plazos y tasas rápidas</h2>';
+  Pd.plazos.forEach(function (p, i) { h += '<div class="prow plazo">' + pin("plazos." + i + ".n", "Nombre", "txt") + pin("plazos." + i + ".m", "Meses", "num") + "</div>"; });
+  h += '<div class="prow two">' + pin("tasas.0", "Tasa rápida 1", "pct", "%") + pin("tasas.1", "Tasa rápida 2", "pct", "%") + "</div></section>";
+  h += '<section class="panel"><h2>Texto final del mensaje</h2>' + pin("textoFinal", "Opcional. Ej.: Sujeto a aprobación de crédito", "txt") + "</section>";
+  h += '<section class="panel"><div class="pbar"><button class="btn pri" data-act="savep"' + (RO ? " disabled" : "") + '>Guardar parámetros</button><button class="btn" data-act="defp"' + (RO ? " disabled" : "") + ">" + (resetAsk ? "Confirmar: volver a los valores originales" : "Volver a los valores originales") + '</button></div><p class="hint" id="pmsg" role="status">' + esc(pMsg) + "</p>" +
+    (RO ? '<p class="hint">Tienes acceso de solo lectura: puedes ver los parámetros, pero no cambiarlos.</p>' : "") + "</section>";
+  return h;
+}
+
+function renderForm() { $("#form").innerHTML = formHtml(); }
+function renderResult() { $("#result").innerHTML = resultHtml(); }
+function renderParams() { $("#pane-par").innerHTML = paramsHtml(); }
+function renderAll() {
+  document.querySelectorAll(".tab").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+  $("#pane-cot").hidden = tab !== "cotizar"; $("#pane-par").hidden = tab !== "params";
+  if (tab === "cotizar") { renderForm(); renderResult(); } else renderParams();
+}
+function refresh() { if (tab === "params") { var a = document.activeElement; if (!(a && $("#pane-par").contains(a) && a.tagName === "INPUT")) renderParams(); } else { if (!focusInForm()) renderForm(); renderResult(); } }
+
+function doCopy() {
+  var lines = C.message(S, P, C.calc(S, P));
+  if (!lines) return;
+  var text = lines.join("\n");
+  var fail = function () {
+    var b = $("#bubble");
+    if (b) { var r = document.createRange(); r.selectNodeContents(b); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    toast("Mantén presionado el mensaje para copiarlo");
+  };
+  try { navigator.clipboard.writeText(text).then(function () { toast("Mensaje copiado"); }, fail); } catch (e) { fail(); }
+}
+function saveParams() {
+  if (RO) return;
+  P = C.clone(Pd);
+  var done = function (m) { pDirty = false; pMsg = m; var el = $("#pmsg"); if (el) el.textContent = m; };
+  if (!db) { done("Aplicado en esta vista. Aquí no se puede guardar."); return; }
+  db.doc("params/main").set(P).then(function () { done("Guardado. Se usará en todos tus dispositivos."); }, function () { pMsg = "No se pudo guardar. Revisa tu conexión."; var el = $("#pmsg"); if (el) el.textContent = pMsg; });
+}
+
+document.addEventListener("click", function (e) {
+  var t = e.target.closest("[data-tab],[data-set],[data-act]");
+  if (!t) return;
+  if (t.dataset.tab) { tab = t.dataset.tab; renderAll(); return; }
+  if (t.dataset.set) {
+    var k = t.dataset.set, v = t.dataset.v;
+    if (k === "buro" || k === "ccit" || k === "comision") v = v === "1";
+    else if (k === "mode") v = Number(v);
+    S[k] = v; persist(); renderForm(); renderResult(); return;
+  }
+  var a = t.dataset.act;
+  if (a === "copy") doCopy();
+  else if (a === "reset") { S = C.blank(); persist(); renderForm(); renderResult(); window.scrollTo(0, 0); }
+  else if (a === "savep") saveParams();
+  else if (a === "defp") {
+    if (RO) return;
+    if (resetAsk) { Pd = C.clone(C.DEF); pDirty = true; resetAsk = false; pMsg = "Valores originales cargados. Toca Guardar parámetros para aplicarlos."; renderParams(); }
+    else { resetAsk = true; renderParams(); setTimeout(function () { if (resetAsk) { resetAsk = false; if (tab === "params") renderParams(); } }, 5000); }
+  }
+});
+document.addEventListener("input", function (e) {
+  var el = e.target;
+  if (el.dataset.in) { S[el.dataset.in] = el.value; persist(); renderResult(); }
+  else if (el.dataset.p && !RO) {
+    var path = el.dataset.p, kind = el.dataset.k, val;
+    if (kind === "txt") val = el.value;
+    else { var x = C.parseNum(el.value); if (isNaN(x)) return; val = kind === "pct" ? x / 100 : x; }
+    setp(Pd, path, val); pDirty = true; pMsg = "Cambios sin guardar.";
+    var m = $("#pmsg"); if (m) m.textContent = pMsg;
+  }
+});
+document.addEventListener("focusout", function (e) {
+  var el = e.target;
+  if (el.dataset && el.dataset.fmt === "int") { var x = C.parseNum(el.value); if (isFinite(x)) el.value = C.fmt(x, x % 1 ? 2 : 0); }
+});
+
+async function boot() {
+  renderAll();
+  try {
+    var c = window.claude;
+    if (c && c.use) {
+      db = await c.use("db");
+      var u = await c.use("user");
+      if (u && u.can) RO = (await u.can("data.write")) === false;
+    }
+  } catch (e) { db = null; }
+  if (db) {
+    db.doc("params/main").onSnapshot(function (s) {
+      if (s.metadata.hasPendingWrites || pDirty || !s.exists) return;
+      P = C.merge(s.data()); Pd = C.clone(P); refresh();
+    }, function () {});
+  }
+}
+boot();
+})();
+</script>
+
+</body></html>
